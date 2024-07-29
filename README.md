@@ -25,12 +25,10 @@ Este projeto implementa uma aplicação para remontagem de genomas utilizando a 
 ### Executando a Aplicação
 
 1. Clone o repositório:
-    ```gh repo clone arthurabelo/Remontagem-de-genoma
-    ```
+    ```gh repo clone arthurabelo/Remontagem-de-genoma```
 
 2. Execute o arquivo `main.py`:
-    ```python main.py
-    ```
+    ```python main.py```
 
 ### Interface Gráfica
 
