@@ -1,8 +1,7 @@
-# Exibição gráfica da composição
-
 import os
 import tkinter as tk
 from tkinter import Canvas
+import math
 
 class VisualizadorGrafoKmers:
     def __init__(self, fita):
@@ -40,20 +39,31 @@ class VisualizadorGrafoKmers:
         canvas = Canvas(root, width=800, height=600, bg='white')
         canvas.pack()
 
-        # Inicializar posições dos nós
-        for node in self.nodes:
-            self.node_positions[node] = (100 + 600 * (self.nodes[node] % 5) / 5, 100 + 400 * (self.nodes[node] // 5) / 5)
+        # Inicializar posições dos nós em um círculo
+        radius = 250
+        center_x = 400
+        center_y = 300
+        num_nodes = len(self.nodes)
+        angle_step = 2 * math.pi / num_nodes
+
+        for i, node in enumerate(self.nodes):
+            angle = i * angle_step
+            x = center_x + radius * math.cos(angle)
+            y = center_y + radius * math.sin(angle)
+            self.node_positions[node] = (x, y)
 
         # Desenhar arestas
         for edge in self.edges:
             x1, y1 = self.node_positions[edge[0]]
             x2, y2 = self.node_positions[edge[1]]
-            canvas.create_line(x1, y1, x2, y2)
+            canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, fill='gray')
 
         # Desenhar nós
+        self.node_items = {}
         for node, (x, y) in self.node_positions.items():
-            oval = canvas.create_oval(x-20, y-20, x+20, y+20, fill='lightblue')
-            canvas.create_text(x, y, text=node)
+            oval = canvas.create_oval(x-20, y-20, x+20, y+20, fill='lightblue', outline='darkblue', width=2)
+            text = canvas.create_text(x, y, text=node, fill='black')
+            self.node_items[oval] = (node, text)
             canvas.tag_bind(oval, '<ButtonPress-1>', self.on_node_press)
             canvas.tag_bind(oval, '<B1-Motion>', self.on_node_motion)
 
@@ -70,5 +80,7 @@ class VisualizadorGrafoKmers:
             dx = event.x - self.offset_x
             dy = event.y - self.offset_y
             self.canvas.move(self.selected_node, dx, dy)
+            node, text = self.node_items[self.selected_node]
+            self.canvas.move(text, dx, dy)
             self.offset_x = event.x
             self.offset_y = event.y
