@@ -1,72 +1,74 @@
 # Exibição gráfica da composição
 
 import os
-import matplotlib.pyplot as plt
-import networkx as nx
+import tkinter as tk
+from tkinter import Canvas
 
 class VisualizadorGrafoKmers:
     def __init__(self, fita):
         self.fita = fita
+        self.nodes = {}
+        self.edges = []
+        self.node_positions = {}
+        self.selected_node = None
+        self.offset_x = 0
+        self.offset_y = 0
 
-    def kmers(self, seq,k):
-        kmers =[]
-        if(k > len(seq)):
+    def kmers(self, seq, k):
+        kmers = []
+        if k > len(seq):
             return kmers
         for i in range(len(seq) - k + 1):
             kmers.append(seq[i:i+k])
-
         return kmers
 
-    def DeBruijnGrafo(self, mers, k):
-        #Passo 1 : pegar todos k-mers da fita
-        k_mers = []
-        temp = []
-        for i in mers:
-            temp = self.kmers(i,k)
-            k_mers.extend(temp)
+    def criar_grafo(self, k):
+        kmers = self.kmers(self.fita, k)
+        for i in range(len(kmers) - 1):
+            prefix = kmers[i][:-1]
+            suffix = kmers[i+1][1:]
+            if prefix not in self.nodes:
+                self.nodes[prefix] = len(self.nodes)
+            if suffix not in self.nodes:
+                self.nodes[suffix] = len(self.nodes)
+            self.edges.append((prefix, suffix))
 
-        #Passo 2 : pegar nós de prefixos e sufixos k-1-mer conectados por edges
-        edges = {}
-        for i in k_mers:
-            edges[i] = [i[0:k-1],i[1:]]
+    def exibir_grafo(self, k):
+        self.criar_grafo(k)
+        root = tk.Tk()
+        root.title("Visualizador de Grafo de De Bruijn")
+        canvas = Canvas(root, width=800, height=600, bg='white')
+        canvas.pack()
 
-        G = nx.DiGraph()
+        # Inicializar posições dos nós
+        for node in self.nodes:
+            self.node_positions[node] = (100 + 600 * (self.nodes[node] % 5) / 5, 100 + 400 * (self.nodes[node] // 5) / 5)
 
-        #Passo 3: Adiciona os nós e arestas ao grafo visual
-        for i in edges:
-            G.add_edge(edges[i][0], edges[i][1])
+        # Desenhar arestas
+        for edge in self.edges:
+            x1, y1 = self.node_positions[edge[0]]
+            x2, y2 = self.node_positions[edge[1]]
+            canvas.create_line(x1, y1, x2, y2)
 
-        # Calcula o tamanho do grafo para ajustes dinâmicos
-        graph_size = len(G.nodes())
-        node_size_adjusted = max(300, 700 / max(1, graph_size / 5))  # Ajusta o tamanho dos nós
-        font_size_adjusted = max(10, 12 / max(1, graph_size / 10))  # Ajusta o tamanho da fonte
-        
-        # Define limites máximos para largura e altura para evitar excesso de uso de memória
-        max_fig_width = 100
-        max_fig_height = 100
+        # Desenhar nós
+        for node, (x, y) in self.node_positions.items():
+            oval = canvas.create_oval(x-20, y-20, x+20, y+20, fill='lightblue')
+            canvas.create_text(x, y, text=node)
+            canvas.tag_bind(oval, '<ButtonPress-1>', self.on_node_press)
+            canvas.tag_bind(oval, '<B1-Motion>', self.on_node_motion)
 
-        fig_width = min(max(6, graph_size * 10), max_fig_width)  # Aumenta width de acordo com que o grafo aumenta, com limite máximo
-        fig_height = min(max(6, graph_size * 10), max_fig_height)  # Aumenta height de acordo com que o grafo aumenta, com limite máximo
-        plt.figure(figsize=(fig_width, fig_height)) # Define o tamanho da figura
-        plt.subplots_adjust(left=0, bottom=0, right=1, top=1)  # Ajusta os parâmetros do subplot
+        self.canvas = canvas
+        root.mainloop()
 
-        # Desenha o grafo com ajustes dinâmicos
-        pos = nx.spring_layout(G)
-        nx.draw_networkx(G, pos, with_labels=True, node_size=node_size_adjusted, font_size=font_size_adjusted)
+    def on_node_press(self, event):
+        self.selected_node = event.widget.find_closest(event.x, event.y)[0]
+        self.offset_x = event.x
+        self.offset_y = event.y
 
-        # Converte as edges em tuplas, cria um dict e desenha os edges
-        for i in edges:
-            edges[i] = tuple(edges[i])
-        graphNodes = dict(zip(edges.values(), edges.keys()))
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=graphNodes, bbox=None, alpha=0.5)
-
-        # Salva o grafo
-        if not os.path.exists('imagens'):
-            os.makedirs('imagens')
-        plt.savefig("imagens/DeBruijnGraph_{}_{}-K{}.png".format(self.fita[:3], self.fita[-3:], k))
-        plt.show()
-
-    def visualizar_grafo(self, k):
-        listafita = []
-        listafita.append(self.fita)
-        self.DeBruijnGrafo(listafita, k)
+    def on_node_motion(self, event):
+        if self.selected_node:
+            dx = event.x - self.offset_x
+            dy = event.y - self.offset_y
+            self.canvas.move(self.selected_node, dx, dy)
+            self.offset_x = event.x
+            self.offset_y = event.y

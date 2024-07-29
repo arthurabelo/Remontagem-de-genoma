@@ -63,7 +63,7 @@ class App(Tk):
         fita = Arquivo('ArthurCarvalho.txt')
         fita = fita.abreArquivo()
         visualizador = VisualizadorGrafoKmers(fita)
-        visualizador.visualizar_grafo(kmer)
+        visualizador.exibir_grafo(k=kmer)
 
     # Chama outra janela para inserir nome do arquivo e o valor de k
     def open_input_file(self):
